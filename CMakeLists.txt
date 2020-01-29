@@ -3,12 +3,14 @@ project (scout.cpp)
 
 
 # adjust these if wabt or yaml-cpp are not subdirectories of this main repo directory
-set(WABT_DIR ./)
-set(YAMLCPP_DIR ./)
+set(WABT_DIR .)
+set(YAMLCPP_DIR .)
 
 
 add_subdirectory(${WABT_DIR}/wabt)
 add_subdirectory(${YAMLCPP_DIR}/yaml-cpp)
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -Wall")
 
 
 add_executable(scout.exec scout.cpp)
