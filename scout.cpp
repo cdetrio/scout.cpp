@@ -192,6 +192,7 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
     }
   );
 
+  /*
   hostModule->AppendFuncExport(
     "eth2_pushNewDeposit",
     {{Type::I32, Type::I32}, {}},
@@ -204,15 +205,16 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       return interp::ResultType::Ok;
     }
   );
+  */
 
   hostModule->AppendFuncExport(
-    "eth2_debugPrintMem",
+    "debug_printMemHex",
     {{Type::I32, Type::I32}, {}},
     [&]( const interp::HostFunc*, const interp::FuncSignature*, 
                  const interp::TypedValues& args, interp::TypedValues& results) {
       uint32_t offset = static_cast<uint32_t>(args[0].value.i32);
       uint32_t length = static_cast<uint32_t>(args[1].value.i32);
-      if(verbose) printf("called host func debugPrintMem %u %u\n", offset, length);
+      printf("called host func debugPrintMem %u %u\n", offset, length);
       uint8_t* module_memory = (uint8_t*) this->module_memory->data.data();
       for(int i=0;i<length;i++){
 	if(verbose) printf("%u ", module_memory[i]);
@@ -228,24 +230,27 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   wabt::Result readresult = ReadBinaryInterp(&env, this->bytecode.data(), this->bytecode.size(),
                             ReadBinaryOptions{Features{}, nullptr, false, true, true},
                             &errors, &module);
-  if (verbose){
-    if(errors.size()){
+
+  if(errors.size() > 0){
       printf("found %lu errors:\n",errors.size());
       for (auto it = errors.begin(); it != errors.end(); ++it) {
         std::cout<< "error: "<< it->message << std::endl;
       }
-    }
+
+      //return 1;
   }
 
   // get most recent memory, assuming this module is required to have a mem
-  //if (verbose){ printf("num memories: %u\n",env.GetMemoryCount()); }
+  printf("num memories: %u\n",env.GetMemoryCount());
   this->module_memory = env.GetMemory(0);
 
+  std::cout << "before running exports...\n";
   // get executor of main
   interp::Export* export_main = module->GetExport("main");
   interp::Executor executor( &env, nullptr, interp::Thread::Options{} );
   ExecResult execResult = executor.Initialize(module); // this finishes module instantiation
 
+  std::cout << "running export...\n";
   // exec
   ExecResult result = executor.RunExport( export_main, interp::TypedValues{} );
   if (verbose){
@@ -404,6 +409,7 @@ int main(int argc, char** argv) {
   // get bytecode from each wasm file
   std::vector< std::vector<uint8_t> > bytecodes;
   for (int i=0; i<filenames.size(); i++){
+    std::cout << "opening " << filenames[i] << "\n";
     //if (verbose) std::cout<<"reading wasm file "<<filenames[i].c_str()<<std::endl;
     std::ifstream stream(filenames[i].c_str(), std::ios::in | std::ios::binary);
     bytecodes.push_back(std::vector<uint8_t>((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>()));
