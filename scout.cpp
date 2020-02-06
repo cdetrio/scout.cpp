@@ -245,10 +245,9 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       printf("called host func debugPrintMem %u %u\n", offset, length);
       uint8_t* module_memory = (uint8_t*) this->module_memory->data.data();
 
-      std::cout << "foobar";
       std::cout << std::hex;
-      for(int i=0; i < length; i++){
-        std::cout << std::setw(2) << static_cast<int>(module_memory[i]);
+      for(int i=offset; i < offset+length; i++){
+        std::cout << std::setw(2) << std::setfill('0') << static_cast<int>(module_memory[i]);
       }
       std::cout << std::dec << std::endl;
 
@@ -287,7 +286,6 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   std::cout << "running export...\n";
   // exec
   ExecResult result = executor.RunExport( export_main, interp::TypedValues{} );
-  if (verbose){
     printf("done executing\n");
     if(!result.ok()){
       printf("Result not ok. Error:\n");	
@@ -299,7 +297,6 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       for (auto it: result.values)
         std::cout<< TypedValueToString(it)<<std::endl;
     }
-  }
 
   return result;
 }
@@ -420,6 +417,15 @@ void print_files_prestates_blocks_poststates(
   std::cout<<std::endl;
 }
 
+std::string format_u256_hex(uint8_t *offset) {
+    std::stringstream ss;
+    ss << std::hex;
+    for (auto i = 0; i < 32; i++ ) {
+        ss << std::setw(2) << std::setfill('0') << static_cast<int>(*(offset + i));
+    }
+
+    return ss.str();
+}
 
 int main(int argc, char** argv) {
 
@@ -484,16 +490,20 @@ int main(int argc, char** argv) {
     Account* account = world_storage[address];
     // compare account state against expected poststate
     uint8_t* expected_poststate = poststates[i].data();
+
+    if (memcmp(account->state_root.data(), expected_poststate, 32) != 0) {
+      std::cout << "post state not equal to expected: " << format_u256_hex(account->state_root.data()) << " != " << format_u256_hex(expected_poststate) << std::endl;
+    }
+
+    /*
     for (int j=0; j<32; j++){
       if (account->state_root[j] != expected_poststate[j]){
         printf("error with poststate %u idx %u  %u!=%u\n", i, j, account->state_root[j], expected_poststate[j]);
 	errorFlag = 1;
       }
     }
+    */
   }
-
-  if (errorFlag==0)
-    printf("passed\n");
 
   // clean up
   for (auto acct: world_storage)
