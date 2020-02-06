@@ -11,6 +11,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 
 // wabt stuff
 #include "src/binary-reader.h"
@@ -99,6 +100,15 @@ Account::Account(std::array<uint8_t,32> address, std::vector<uint8_t> &bytecode,
 }
 
 
+// function not implemented here, just need a stub so the import is valid
+// the implementation is in interp.cc under `case Opcode::EwasmOpcodeName`
+interp::Result EwasmHostFunc(const HostFunc* func,
+                                    const interp::FuncSignature* sig,
+                                    const TypedValues& args,
+                                    TypedValues& results) {
+  return interp::ResultType::Ok;
+}
+
 // execute on calldata
 ExecResult Account::exec(std::vector<uint8_t> &calldata){
   if(verbose){
@@ -116,6 +126,24 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
 
   // create a host module as the first module in this store
   interp::HostModule* hostModule = env.AppendHostModule("env");
+
+  hostModule->AppendFuncExport("bignum_f1m_mul", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_square", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_add", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_sub", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_toMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_fromMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_int_mul", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_int_add", {{Type::I32, Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_int_sub", {{Type::I32, Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_int_div", {{Type::I32, Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+
+  /*
+  hostModule->AppendFuncExport("bignum_frm_mul", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_add", {{Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_sub", {{Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_div", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  */
 
   // host module's functions, can be called from Wasm
   hostModule->AppendFuncExport(
@@ -216,10 +244,16 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       uint32_t length = static_cast<uint32_t>(args[1].value.i32);
       printf("called host func debugPrintMem %u %u\n", offset, length);
       uint8_t* module_memory = (uint8_t*) this->module_memory->data.data();
-      for(int i=0;i<length;i++){
-	if(verbose) printf("%u ", module_memory[i]);
+
+      std::cout << "foobar";
+      std::cout << std::hex;
+      for(int i=0; i < length; i++){
+        std::cout << std::setw(2) << static_cast<int>(module_memory[i]);
       }
-      if(verbose) printf("\n");
+      std::cout << std::dec << std::endl;
+
+      std::cout << "debug_memHex done\n";
+
       return interp::ResultType::Ok;
     }
   );
@@ -343,6 +377,8 @@ int parse_scout_yaml(
     }
   }
   if (verbose){ printf("\npoststates:\n"); for (std::size_t i=0;i<poststates_hexstr.size();i++) { std::cout<<poststates_hexstr[i]<<std::endl; } }
+
+  return 0;
 
 }
 
