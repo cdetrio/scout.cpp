@@ -147,7 +147,7 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
 
   // host module's functions, can be called from Wasm
   hostModule->AppendFuncExport(
-    "eth2_loadPreStateRoot",
+    "eth2_loadPrestateRoot",
     {{Type::I32}, {}},
     [&]( const interp::HostFunc*, const interp::FuncSignature*, 
                  const interp::TypedValues& args, interp::TypedValues& results ) {
