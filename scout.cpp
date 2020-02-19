@@ -138,12 +138,12 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   hostModule->AppendFuncExport("bignum_int_sub", {{Type::I32, Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
   hostModule->AppendFuncExport("bignum_int_div", {{Type::I32, Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
 
-  /*
-  hostModule->AppendFuncExport("bignum_frm_mul", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
-  hostModule->AppendFuncExport("bignum_frm_add", {{Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
-  hostModule->AppendFuncExport("bignum_frm_sub", {{Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
-  hostModule->AppendFuncExport("bignum_frm_div", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
-  */
+  hostModule->AppendFuncExport("bignum_frm_mul", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_add", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_sub", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_square", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_fromMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_toMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
 
   // host module's functions, can be called from Wasm
   hostModule->AppendFuncExport(
