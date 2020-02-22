@@ -32,6 +32,8 @@
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 
+#include "bn_api/bn_api.h"
+
 
 int verbose = 0;
 
@@ -127,6 +129,9 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   // create a host module as the first module in this store
   interp::HostModule* hostModule = env.AppendHostModule("env");
 
+
+
+  /*
   hostModule->AppendFuncExport("bignum_f1m_mul", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
   hostModule->AppendFuncExport("bignum_f1m_square", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
   hostModule->AppendFuncExport("bignum_f1m_add", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
@@ -138,12 +143,22 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   hostModule->AppendFuncExport("bignum_int_sub", {{Type::I32, Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
   hostModule->AppendFuncExport("bignum_int_div", {{Type::I32, Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
 
+  hostModule->AppendFuncExport("bignum_frm_mul", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_add", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_sub", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_square", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_fromMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_toMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  */
+
   /*
   hostModule->AppendFuncExport("bignum_frm_mul", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
   hostModule->AppendFuncExport("bignum_frm_add", {{Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
   hostModule->AppendFuncExport("bignum_frm_sub", {{Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
   hostModule->AppendFuncExport("bignum_frm_div", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
   */
+
+  BNAPI api(this->module_memory, hostModule);
 
   // host module's functions, can be called from Wasm
   hostModule->AppendFuncExport(
@@ -168,8 +183,9 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   hostModule->AppendFuncExport(
     "eth2_blockDataSize",
     {{}, {Type::I32}},
-    [&]( const interp::HostFunc*, const interp::FuncSignature*, 
-                 const interp::TypedValues& args, interp::TypedValues& results ) {
+    [&]( const interp::HostFunc*,
+         const interp::FuncSignature*, 
+         const interp::TypedValues& args, interp::TypedValues& results ) {
       if(verbose) printf("called host func blockDataSize\n");
       if(verbose) printf("calldata size is %lu\n",this->calldata->size());
       results[0].set_i32(this->calldata->size());
@@ -478,6 +494,8 @@ int main(int argc, char** argv) {
     Account* account = world_storage[address];
     account->exec( shard_blocks[i].second );
   }
+
+  std::cout << "FOOBARBAZBAT\n";
 
   // check post-states
   int errorFlag = 0;
