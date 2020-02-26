@@ -12,7 +12,8 @@ private:
                                      const TypedValues& args,
                                      TypedValues& results);
 public:
-    BNAPI(wabt::interp::Memory *memory, interp::HostModule *host_module);
+    void SetMemory(wabt::interp::Memory *memory);
+    void AddHostFunctions(interp::HostModule *host_module);
 
 	void mul256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
     void div256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &c_offset, uint32_t &ret_offset);
