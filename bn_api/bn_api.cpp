@@ -8,7 +8,7 @@ using namespace wabt::interp;
 
 typedef unsigned __int128 uint128_t;
 
-const bool tracing = true;
+const bool tracing = false;
 
 intx::uint256 BignumOne = intx::from_string<intx::uint256>("1");
 
@@ -19,6 +19,8 @@ intx::uint256 FqRsquared = intx::from_string<intx::uint256>("3096616502983703923
 intx::uint256 FrModulus = intx::from_string<intx::uint256>("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 intx::uint256 FrInv = intx::from_string<intx::uint256>("134950519161967129512891662437158223871");
 intx::uint256 FrRsquared = intx::from_string<intx::uint256>("944936681149208446651664254269745548490766851729442924617792859073125903783");
+
+intx::uint256 two_pow_256 = intx::from_string<intx::uint256>("115792089237316195423570985008687907853269984665640564039457584007913129639935");
 
 void trace_words(uint8_t *mem, size_t len) {
     std::cout << std::hex << std::setw(2) << std::setfill('0');
@@ -41,6 +43,36 @@ static void trace_word(uint8_t *mem) {
     std::cout << std::dec << std::endl;
 }
 
+//non-interleaved
+
+void montgomery_multiplication_256(uint64_t* _a, uint64_t* _b, uint64_t* _mod, uint64_t* _inv, uint64_t* _out) {
+  using intx::uint512;
+
+  intx::uint256 *a = reinterpret_cast<intx::uint256 *>(_a);
+  intx::uint256 *b = reinterpret_cast<intx::uint256 *>(_b);
+  intx::uint256 *mod = reinterpret_cast<intx::uint256 *>(_mod);
+  intx::uint256 *inv = reinterpret_cast<intx::uint256 *>(_inv);
+  intx::uint256 *out = reinterpret_cast<intx::uint256 *>(_out);
+
+  auto mask128 = intx::from_string<intx::uint128>("340282366920938463463374607431768211455");
+  auto res1 = uint512{*a} * uint512{*b};
+  //auto k0 = ((inv * res1).lo).lo;
+  auto k0 = (uint512{*inv} * res1).lo & mask128;
+  auto res2 = ((uint512{k0} * uint512{*mod}) + res1) >> 128;
+  auto k1 = (res2 * uint512{*inv}).lo & mask128;
+  auto result = ((uint512{k1} * uint512{*mod}) + res2) >> 128; // correct version
+  //auto result = (((uint512{k1} * uint512{*mod}) + res2) >> 128).lo; // buggy version
+  if (result >= *mod) {
+    result = result - *mod;
+  }
+  *out = result.lo; // correct version
+  //*out = result; // buggy version
+}
+
+/*
+
+// interleaved (broken)
+
 void montgomery_multiplication_256(uint64_t* const x, uint64_t* const y, uint64_t* const m, uint64_t* const inv, uint64_t *out){
   uint64_t A[256/64*2] = {0};
   for (int i=0; i<256/64; i++){
@@ -61,18 +93,18 @@ void montgomery_multiplication_256(uint64_t* const x, uint64_t* const y, uint64_
           A[i+j+k]=0;
           k++;
         }
-        if (i+j+k<256/64*2)
+        if (i+j+k<9)
           A[i+j+k]+=1;
       }
 
     }
     A[i+256/64]+=carry;
   }
-  for (int i=0; i<256/64;i++)
+  for (int i=0; i<=256/64;i++)
     out[i] = A[i+256/64];
   // check if m <= out
   int leq = 1;
-  for (int i=256/64 -1;i>=0;i--){
+  for (int i=256/64;i>=0;i--){
     if (m[i]>out[i]){
       leq = 0;
       break;
@@ -85,7 +117,7 @@ void montgomery_multiplication_256(uint64_t* const x, uint64_t* const y, uint64_
   if (leq){
     uint64_t carry=0;
 #pragma unroll
-    for (int i=0; i<256/64;i++){
+    for (int i=0; i<=256/64;i++){
       uint64_t temp = m[i]-carry;
       out[i] = temp-out[i];
       carry = (temp<out[i] || m[i]<carry) ? 1:0;
@@ -93,6 +125,7 @@ void montgomery_multiplication_256(uint64_t* const x, uint64_t* const y, uint64_
   }
 
 }
+*/
 
 void BNAPI::SetMemory(wabt::interp::Memory *memory) {
     this->memory = memory;
@@ -313,7 +346,7 @@ void BNAPI::AddHostFunctions(wabt::interp::HostModule *host_module) {
             uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
             uint32_t arg2_offset = static_cast<uint32_t>(args[1].value.i32);
             uint32_t ret_offset = static_cast<uint32_t>(args[2].value.i32);
-
+ 
             uint32_t result = this->sub256(arg1_offset, arg2_offset, ret_offset);
 
             results[0].set_i32(result);
@@ -343,7 +376,9 @@ void BNAPI::mul256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset)
 	intx::uint256* b = reinterpret_cast<intx::uint256*>(&(this->memory->data[b_offset]));
 	intx::uint256* ret_mem = reinterpret_cast<intx::uint256*>(&(this->memory->data[ret_offset]));
 
-	*ret_mem = *a * *b;
+    //std::cout << "int_mul " << intx::to_string(*a) << " * " << intx::to_string(*b);
+	*ret_mem = (*a * *b ) % two_pow_256;
+    //std::cout << " = " << intx::to_string(*ret_mem) << std::endl;
 }
 
 void BNAPI::div256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &c_offset, uint32_t &ret_offset) {
@@ -367,7 +402,7 @@ uint32_t BNAPI::add256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_off
         *ret_mem = std::get<0>(add_res);
 
         if (tracing) {
-            std::cout << "add256 " << intx::to_string(*a) << " + " << intx::to_string(*b) << " = " << intx::to_string(*ret_mem) << "\n";
+            //std::cout << "add256 " << intx::to_string(*a) << " + " << intx::to_string(*b) << " = " << intx::to_string(*ret_mem) << "\n";
         }
 
         uint32_t carry = 0;
@@ -432,11 +467,12 @@ void fromMont(uint64_t *a, intx::uint256 *modulus, intx::uint256 *inverse, uint6
     montgomery_multiplication_256(a, b, mod, inv, ret_offset);
 }
 
-void toMont(uint64_t *a, intx::uint256 *modulus, intx::uint256 *inverse, uint64_t *ret_offset) {
+void toMont(uint64_t *a, intx::uint256 *r2, intx::uint256 *modulus, intx::uint256 *inverse, uint64_t *ret_offset) {
     uint64_t *mod = reinterpret_cast<uint64_t *>(modulus);
     uint64_t *inv = reinterpret_cast<uint64_t *>(inverse);
+    uint64_t *r_squared = reinterpret_cast<uint64_t *>(r2);
 
-    montgomery_multiplication_256(a, mod, mod, inv, ret_offset);
+    montgomery_multiplication_256(a, r_squared, mod, inv, ret_offset);
 }
 
 void BNAPI::f1m_add(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset) {
@@ -480,14 +516,14 @@ void BNAPI::f1m_mul(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset
     if (tracing) {
         intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
         intx::uint256 *b_num = reinterpret_cast<intx::uint256 *>(b);
-        std::cout << "f1m_mul " << intx::to_string(*a_num) << " * " << intx::to_string(*b_num);
+        //std::cout << "f1m_mul " << intx::to_string(*a_num) << " * " << intx::to_string(*b_num);
     }
 
     mul_mod(a, b, &FqModulus, &FqInv, ret);
 
     if (tracing) {
         intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
-        std::cout << " = " << intx::to_string(*ret_num) << std::endl;
+        //std::cout << " = " << intx::to_string(*ret_num) << std::endl;
     }
 }
 
@@ -536,7 +572,7 @@ void BNAPI::f1m_toMont(uint32_t &a_offset, uint32_t &ret_offset) {
         std::cout << "f1m_toMont " << intx::to_string(*a_num) << " -> ";
     }
 
-    toMont(a, &FqModulus, &FqInv, ret);
+    toMont(a, &FqRsquared, &FqModulus, &FqInv, ret);
 
     if (tracing) {
         intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
@@ -621,7 +657,7 @@ void BNAPI::fr_toMont(uint32_t &a_offset, uint32_t &ret_offset) {
         std::cout << "fr_toMont " << a_offset << " " << intx::to_string(*a_num);;
     }
 
-    toMont(a, &FrModulus, &FrInv, ret);
+    toMont(a, &FrRsquared, &FrModulus, &FrInv, ret);
 
     if (tracing) {
         intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
