@@ -11,6 +11,9 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
+
+#include <chrono>
 
 // wabt stuff
 #include "src/binary-reader.h"
@@ -31,12 +34,15 @@
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 
+#include "bn_api/bn_api.h"
+
 
 int verbose = 0;
 
 
 using namespace wabt;
 using namespace wabt::interp;
+using namespace std::chrono;
 
 
 
@@ -78,7 +84,14 @@ struct Account {
   ExecResult exec(std::vector<uint8_t> &calldata);
 };
 
+void trace_word(uint8_t *mem) {
+    std::cout << std::hex << std::setw(2) << std::setfill('0');
+    for (auto j = 0; j < 32; j++) {
+        std::cout << static_cast<int>(*(mem + j));
+    }   
 
+    std::cout << std::dec << std::endl;
+}
 
 // constructor
 Account::Account(std::array<uint8_t,32> address, std::vector<uint8_t> &bytecode, std::vector<uint8_t> &state_root) {
@@ -99,6 +112,15 @@ Account::Account(std::array<uint8_t,32> address, std::vector<uint8_t> &bytecode,
 }
 
 
+// function not implemented here, just need a stub so the import is valid
+// the implementation is in interp.cc under `case Opcode::EwasmOpcodeName`
+interp::Result EwasmHostFunc(const HostFunc* func,
+                                    const interp::FuncSignature* sig,
+                                    const TypedValues& args,
+                                    TypedValues& results) {
+  return interp::ResultType::Ok;
+}
+
 // execute on calldata
 ExecResult Account::exec(std::vector<uint8_t> &calldata){
   if(verbose){
@@ -116,6 +138,39 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
 
   // create a host module as the first module in this store
   interp::HostModule* hostModule = env.AppendHostModule("env");
+
+
+
+  /*
+  hostModule->AppendFuncExport("bignum_f1m_mul", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_square", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_add", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_sub", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_toMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_f1m_fromMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_int_mul", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_int_add", {{Type::I32, Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_int_sub", {{Type::I32, Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_int_div", {{Type::I32, Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+
+  hostModule->AppendFuncExport("bignum_frm_mul", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_add", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_sub", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_square", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_fromMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_toMontgomery", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  */
+
+  /*
+  hostModule->AppendFuncExport("bignum_frm_mul", {{Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_add", {{Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_sub", {{Type::I32, Type::I32}, {Type::I32}}, EwasmHostFunc);
+  hostModule->AppendFuncExport("bignum_frm_div", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
+  */
+
+
+
+  BNAPI bnapi;
 
   // host module's functions, can be called from Wasm
   hostModule->AppendFuncExport(
@@ -140,8 +195,9 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   hostModule->AppendFuncExport(
     "eth2_blockDataSize",
     {{}, {Type::I32}},
-    [&]( const interp::HostFunc*, const interp::FuncSignature*, 
-                 const interp::TypedValues& args, interp::TypedValues& results ) {
+    [&]( const interp::HostFunc*,
+         const interp::FuncSignature*, 
+         const interp::TypedValues& args, interp::TypedValues& results ) {
       if(verbose) printf("called host func blockDataSize\n");
       if(verbose) printf("calldata size is %lu\n",this->calldata->size());
       results[0].set_i32(this->calldata->size());
@@ -157,16 +213,17 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       uint32_t memory_offset = static_cast<uint32_t>(args[0].value.i32);
       uint32_t calldata_offset = static_cast<uint32_t>(args[1].value.i32);
       uint32_t length = static_cast<uint32_t>(args[2].value.i32);
-      if(verbose) printf("called host func blockDataCopy %u %u %u\n",memory_offset, calldata_offset, length);
+
+      printf("called host func blockDataCopy %u %u %u\n",memory_offset, calldata_offset, length);
+
       // TODO: check if within bounds of memory and calldata
       uint8_t* memory = (uint8_t*) this->module_memory->data.data()+memory_offset;
       uint8_t* calldata = this->calldata->data()+calldata_offset;
       //memcpy(module_memory+outputOffset, this->calldata->data()+inputOffset, length);
       for(int i=0;i<length;i++){
-	if(verbose) printf("%u %u  ", memory[i], calldata[i]);
         memory[i] = calldata[i];
       }
-      if(verbose) printf("\n");
+
       return interp::ResultType::Ok;
     }
   );
@@ -192,6 +249,7 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
     }
   );
 
+  /*
   hostModule->AppendFuncExport(
     "eth2_pushNewDeposit",
     {{Type::I32, Type::I32}, {}},
@@ -204,23 +262,31 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       return interp::ResultType::Ok;
     }
   );
+  */
 
   hostModule->AppendFuncExport(
-    "eth2_debugPrintMem",
+    "debug_printMemHex",
     {{Type::I32, Type::I32}, {}},
     [&]( const interp::HostFunc*, const interp::FuncSignature*, 
                  const interp::TypedValues& args, interp::TypedValues& results) {
       uint32_t offset = static_cast<uint32_t>(args[0].value.i32);
       uint32_t length = static_cast<uint32_t>(args[1].value.i32);
-      if(verbose) printf("called host func debugPrintMem %u %u\n", offset, length);
+      printf("called host func debugPrintMem %u %u\n", offset, length);
       uint8_t* module_memory = (uint8_t*) this->module_memory->data.data();
-      for(int i=0;i<length;i++){
-	if(verbose) printf("%u ", module_memory[i]);
+
+      std::cout << std::hex;
+      for(int i=offset; i < offset+length; i++){
+        std::cout << std::setw(2) << std::setfill('0') << static_cast<int>(module_memory[i]);
       }
-      if(verbose) printf("\n");
+      std::cout << std::dec << std::endl;
+
+      std::cout << "debug_memHex done\n";
+
       return interp::ResultType::Ok;
     }
   );
+
+  bnapi.AddHostFunctions(hostModule);
 
   // instantiate this bytecode in this env
   DefinedModule* module = nullptr;
@@ -228,39 +294,45 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   wabt::Result readresult = ReadBinaryInterp(&env, this->bytecode.data(), this->bytecode.size(),
                             ReadBinaryOptions{Features{}, nullptr, false, true, true},
                             &errors, &module);
-  if (verbose){
-    if(errors.size()){
+
+  if(errors.size() > 0){
       printf("found %lu errors:\n",errors.size());
       for (auto it = errors.begin(); it != errors.end(); ++it) {
         std::cout<< "error: "<< it->message << std::endl;
       }
-    }
-  }
 
-  // get most recent memory, assuming this module is required to have a mem
-  //if (verbose){ printf("num memories: %u\n",env.GetMemoryCount()); }
-  this->module_memory = env.GetMemory(0);
+      //return 1;
+  }
 
   // get executor of main
   interp::Export* export_main = module->GetExport("main");
   interp::Executor executor( &env, nullptr, interp::Thread::Options{} );
   ExecResult execResult = executor.Initialize(module); // this finishes module instantiation
 
+  this->module_memory = env.GetMemory(0);
+  bnapi.SetMemory(this->module_memory);
+
   // exec
+  high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
   ExecResult result = executor.RunExport( export_main, interp::TypedValues{} );
-  if (verbose){
-    printf("done executing\n");
+
+  high_resolution_clock::time_point t2 = high_resolution_clock::now();
+  duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+  std::cout << "benchmark took " << time_span.count() << " seconds.\n";
+
     if(!result.ok()){
       printf("Result not ok. Error:\n");	
       std::cout<< ResultToString(result.result)<<std::endl;
     }
+    /*
     printf("%lu values returned\n",result.values.size());
     if (result.values.size()){
       printf("returned values:\n");
       for (auto it: result.values)
         std::cout<< TypedValueToString(it)<<std::endl;
     }
-  }
+    */
 
   return result;
 }
@@ -339,6 +411,8 @@ int parse_scout_yaml(
   }
   if (verbose){ printf("\npoststates:\n"); for (std::size_t i=0;i<poststates_hexstr.size();i++) { std::cout<<poststates_hexstr[i]<<std::endl; } }
 
+  return 0;
+
 }
 
 
@@ -379,6 +453,15 @@ void print_files_prestates_blocks_poststates(
   std::cout<<std::endl;
 }
 
+std::string format_u256_hex(uint8_t *offset) {
+    std::stringstream ss;
+    ss << std::hex;
+    for (auto i = 0; i < 32; i++ ) {
+        ss << std::setw(2) << std::setfill('0') << static_cast<int>(*(offset + i));
+    }
+
+    return ss.str();
+}
 
 int main(int argc, char** argv) {
 
@@ -404,6 +487,7 @@ int main(int argc, char** argv) {
   // get bytecode from each wasm file
   std::vector< std::vector<uint8_t> > bytecodes;
   for (int i=0; i<filenames.size(); i++){
+    std::cout << "opening " << filenames[i] << "\n";
     //if (verbose) std::cout<<"reading wasm file "<<filenames[i].c_str()<<std::endl;
     std::ifstream stream(filenames[i].c_str(), std::ios::in | std::ios::binary);
     bytecodes.push_back(std::vector<uint8_t>((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>()));
@@ -442,16 +526,20 @@ int main(int argc, char** argv) {
     Account* account = world_storage[address];
     // compare account state against expected poststate
     uint8_t* expected_poststate = poststates[i].data();
+
+    if (memcmp(account->state_root.data(), expected_poststate, 32) != 0) {
+      std::cout << "post state not equal to expected: " << format_u256_hex(account->state_root.data()) << " != " << format_u256_hex(expected_poststate) << std::endl;
+    }
+
+    /*
     for (int j=0; j<32; j++){
       if (account->state_root[j] != expected_poststate[j]){
         printf("error with poststate %u idx %u  %u!=%u\n", i, j, account->state_root[j], expected_poststate[j]);
 	errorFlag = 1;
       }
     }
+    */
   }
-
-  if (errorFlag==0)
-    printf("passed\n");
 
   // clean up
   for (auto acct: world_storage)
