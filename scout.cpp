@@ -216,9 +216,6 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
 
       printf("called host func blockDataCopy %u %u %u\n",memory_offset, calldata_offset, length);
 
-      std::cout << "word1\n";
-      trace_word((uint8_t *)(this->module_memory->data.data() + 512096));
-
       // TODO: check if within bounds of memory and calldata
       uint8_t* memory = (uint8_t*) this->module_memory->data.data()+memory_offset;
       uint8_t* calldata = this->calldata->data()+calldata_offset;
@@ -226,9 +223,6 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       for(int i=0;i<length;i++){
         memory[i] = calldata[i];
       }
-
-      std::cout << "word2\n";
-      trace_word((uint8_t *)(this->module_memory->data.data() + 512096));
 
       return interp::ResultType::Ok;
     }
@@ -310,10 +304,6 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       //return 1;
   }
 
-  // get most recent memory, assuming this module is required to have a mem
-  printf("num memories: %u\n",env.GetMemoryCount());
-
-  std::cout << "before running exports...\n";
   // get executor of main
   interp::Export* export_main = module->GetExport("main");
   interp::Executor executor( &env, nullptr, interp::Thread::Options{} );
@@ -322,8 +312,6 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   this->module_memory = env.GetMemory(0);
   bnapi.SetMemory(this->module_memory);
 
-  std::cout << "running export...\n";
-
   // exec
   high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
@@ -331,19 +319,20 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
 
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
-  std::cout << "It took me " << time_span.count() << " seconds.";
+  std::cout << "benchmark took " << time_span.count() << " seconds.\n";
 
-    printf("done executing\n");
     if(!result.ok()){
       printf("Result not ok. Error:\n");	
       std::cout<< ResultToString(result.result)<<std::endl;
     }
+    /*
     printf("%lu values returned\n",result.values.size());
     if (result.values.size()){
       printf("returned values:\n");
       for (auto it: result.values)
         std::cout<< TypedValueToString(it)<<std::endl;
     }
+    */
 
   return result;
 }
@@ -525,8 +514,6 @@ int main(int argc, char** argv) {
     Account* account = world_storage[address];
     account->exec( shard_blocks[i].second );
   }
-
-  std::cout << "FOOBARBAZBAT\n";
 
   // check post-states
   int errorFlag = 0;
