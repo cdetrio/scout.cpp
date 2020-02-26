@@ -13,6 +13,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include <chrono>
+
 // wabt stuff
 #include "src/binary-reader.h"
 #include "src/cast.h"
@@ -40,6 +42,7 @@ int verbose = 0;
 
 using namespace wabt;
 using namespace wabt::interp;
+using namespace std::chrono;
 
 
 
@@ -81,7 +84,14 @@ struct Account {
   ExecResult exec(std::vector<uint8_t> &calldata);
 };
 
+void trace_word(uint8_t *mem) {
+    std::cout << std::hex << std::setw(2) << std::setfill('0');
+    for (auto j = 0; j < 32; j++) {
+        std::cout << static_cast<int>(*(mem + j));
+    }   
 
+    std::cout << std::dec << std::endl;
+}
 
 // constructor
 Account::Account(std::array<uint8_t,32> address, std::vector<uint8_t> &bytecode, std::vector<uint8_t> &state_root) {
@@ -158,7 +168,9 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   hostModule->AppendFuncExport("bignum_frm_div", {{Type::I32, Type::I32, Type::I32}, {}}, EwasmHostFunc);
   */
 
-  BNAPI api(this->module_memory, hostModule);
+
+
+  BNAPI bnapi;
 
   // host module's functions, can be called from Wasm
   hostModule->AppendFuncExport(
@@ -201,16 +213,23 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
       uint32_t memory_offset = static_cast<uint32_t>(args[0].value.i32);
       uint32_t calldata_offset = static_cast<uint32_t>(args[1].value.i32);
       uint32_t length = static_cast<uint32_t>(args[2].value.i32);
-      if(verbose) printf("called host func blockDataCopy %u %u %u\n",memory_offset, calldata_offset, length);
+
+      printf("called host func blockDataCopy %u %u %u\n",memory_offset, calldata_offset, length);
+
+      std::cout << "word1\n";
+      trace_word((uint8_t *)(this->module_memory->data.data() + 512096));
+
       // TODO: check if within bounds of memory and calldata
       uint8_t* memory = (uint8_t*) this->module_memory->data.data()+memory_offset;
       uint8_t* calldata = this->calldata->data()+calldata_offset;
       //memcpy(module_memory+outputOffset, this->calldata->data()+inputOffset, length);
       for(int i=0;i<length;i++){
-	if(verbose) printf("%u %u  ", memory[i], calldata[i]);
         memory[i] = calldata[i];
       }
-      if(verbose) printf("\n");
+
+      std::cout << "word2\n";
+      trace_word((uint8_t *)(this->module_memory->data.data() + 512096));
+
       return interp::ResultType::Ok;
     }
   );
@@ -273,6 +292,8 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
     }
   );
 
+  bnapi.AddHostFunctions(hostModule);
+
   // instantiate this bytecode in this env
   DefinedModule* module = nullptr;
   Errors errors;
@@ -291,7 +312,6 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
 
   // get most recent memory, assuming this module is required to have a mem
   printf("num memories: %u\n",env.GetMemoryCount());
-  this->module_memory = env.GetMemory(0);
 
   std::cout << "before running exports...\n";
   // get executor of main
@@ -299,9 +319,20 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   interp::Executor executor( &env, nullptr, interp::Thread::Options{} );
   ExecResult execResult = executor.Initialize(module); // this finishes module instantiation
 
+  this->module_memory = env.GetMemory(0);
+  bnapi.SetMemory(this->module_memory);
+
   std::cout << "running export...\n";
+
   // exec
+  high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
   ExecResult result = executor.RunExport( export_main, interp::TypedValues{} );
+
+  high_resolution_clock::time_point t2 = high_resolution_clock::now();
+  duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+  std::cout << "It took me " << time_span.count() << " seconds.";
+
     printf("done executing\n");
     if(!result.ok()){
       printf("Result not ok. Error:\n");	
