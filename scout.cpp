@@ -464,86 +464,34 @@ std::string format_u256_hex(uint8_t *offset) {
 }
 
 int main(int argc, char** argv) {
+  intx::uint256 x = FqModulus - intx::from_string<intx::uint256>("1"); 
+  intx::uint256 y = intx::from_string<intx::uint256>("3");
+  uint64_t *x_ptr = reinterpret_cast<uint64_t *>(&x);
+  uint64_t *y_ptr = reinterpret_cast<uint64_t *>(&y);
+  uint64_t *fq_mod = reinterpret_cast<uint64_t *>(&FqModulus);
+  uint64_t *fq_inv = reinterpret_cast<uint64_t *>(&FqInv);
 
-  //get all command-line args
-  std::vector<std::string> args(argv, argv + argc);
-  if (args.size()<2){
-    printf("usage: ./scout.exec helloworld.yaml\n");
-    return -1;
+  std::cout << "mont mul interleaved\n";
+
+  high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+  for (int i = 0; i < 100000; i++) {
+      montgomery_multiplication_256_interleaved(x_ptr, y_ptr, fq_mod, fq_inv, x_ptr);
   }
 
-  // parse scout-formatted yaml file to get wasm filenames, prestates, calldatas, and poststates
-  std::vector<std::string> filenames;
-  std::vector< std::pair< uint32_t, std::vector<uint8_t> > > shard_blocks; 
-  std::vector< std::vector<uint8_t> > prestates;
-  std::vector< std::vector<uint8_t> > poststates;
-  parse_scout_yaml(args[1], filenames, shard_blocks, prestates, poststates);
+  high_resolution_clock::time_point t2 = high_resolution_clock::now();
+  duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+  std::cout << "interleaved took " << time_span.count() << " seconds.\n";
 
-  if(verbose) print_files_prestates_blocks_poststates(filenames, shard_blocks, prestates, poststates);
+  std::cout << "mont mul non-interleaved\n";
 
-  if(filenames.size() != prestates.size() || prestates.size() != poststates.size())
-    printf("ERROR: different numbers of files, prestates, or poststates\n");
-
-  // get bytecode from each wasm file
-  std::vector< std::vector<uint8_t> > bytecodes;
-  for (int i=0; i<filenames.size(); i++){
-    std::cout << "opening " << filenames[i] << "\n";
-    //if (verbose) std::cout<<"reading wasm file "<<filenames[i].c_str()<<std::endl;
-    std::ifstream stream(filenames[i].c_str(), std::ios::in | std::ios::binary);
-    bytecodes.push_back(std::vector<uint8_t>((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>()));
+  for (int i = 0; i < 100000; i++) {
+      montgomery_multiplication_256(x_ptr, y_ptr, fq_mod, fq_inv, x_ptr);
   }
 
-  // create each account with address, fill bytecode and prestate
-  for (int i=0; i<filenames.size(); i++){
-    std::array<uint8_t,32> address;
-    for (int j=0; j<32; j++)
-      address[j] = 0;
-    *((uint32_t*)address.data())=i; // address is index for now
-    // instantiate
-    Account* account = new Account(address, bytecodes[i], prestates[i]);
-    // register it globally
-    world_storage[address]=account;
-  }
-
-  // execute each call
-  for (int i=0; i<shard_blocks.size(); i++){
-    std::array<uint8_t,32> address;
-    for (int j=0; j<32; j++)
-      address[j] = 0;
-    *((uint32_t*)address.data())=shard_blocks[i].first; // address is index for now
-    Account* account = world_storage[address];
-    account->exec( shard_blocks[i].second );
-  }
-
-  // check post-states
-  int errorFlag = 0;
-  for (int i=0; i<poststates.size(); i++){
-    std::array<uint8_t,32> address;
-    for (int j=0; j<32; j++)
-      address[j] = 0;
-    *((uint32_t*)address.data())=i; // address is index for now
-    // get account form global state
-    Account* account = world_storage[address];
-    // compare account state against expected poststate
-    uint8_t* expected_poststate = poststates[i].data();
-
-    if (memcmp(account->state_root.data(), expected_poststate, 32) != 0) {
-      std::cout << "post state not equal to expected: " << format_u256_hex(account->state_root.data()) << " != " << format_u256_hex(expected_poststate) << std::endl;
-    }
-
-    /*
-    for (int j=0; j<32; j++){
-      if (account->state_root[j] != expected_poststate[j]){
-        printf("error with poststate %u idx %u  %u!=%u\n", i, j, account->state_root[j], expected_poststate[j]);
-	errorFlag = 1;
-      }
-    }
-    */
-  }
-
-  // clean up
-  for (auto acct: world_storage)
-    delete world_storage[acct.first];
+  high_resolution_clock::time_point t3 = high_resolution_clock::now();
+  duration<double> time_span2 = duration_cast<duration<double>>(t3 - t2);
+  std::cout << "non-interleaved took " << time_span2.count() << " seconds.\n";
 
   return 0;
 }

@@ -11,7 +11,7 @@ typedef unsigned __int128 uint128_t;
 const bool tracing = false;
 
 intx::uint256 BignumOne = intx::from_string<intx::uint256>("1");
-
+intx::uint256 two_pow_256 = intx::from_string<intx::uint256>("115792089237316195423570985008687907853269984665640564039457584007913129639935");
 intx::uint256 FqModulus = intx::from_string<intx::uint256>("21888242871839275222246405745257275088696311157297823662689037894645226208583");
 intx::uint256 FqInv = intx::from_string<intx::uint256>("211173256549385567650468519415768310665");
 intx::uint256 FqRsquared = intx::from_string<intx::uint256>("3096616502983703923843567936837374451735540968419076528771170197431451843209");
@@ -19,8 +19,6 @@ intx::uint256 FqRsquared = intx::from_string<intx::uint256>("3096616502983703923
 intx::uint256 FrModulus = intx::from_string<intx::uint256>("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 intx::uint256 FrInv = intx::from_string<intx::uint256>("134950519161967129512891662437158223871");
 intx::uint256 FrRsquared = intx::from_string<intx::uint256>("944936681149208446651664254269745548490766851729442924617792859073125903783");
-
-intx::uint256 two_pow_256 = intx::from_string<intx::uint256>("115792089237316195423570985008687907853269984665640564039457584007913129639935");
 
 void trace_words(uint8_t *mem, size_t len) {
     std::cout << std::hex << std::setw(2) << std::setfill('0');
@@ -69,11 +67,9 @@ void montgomery_multiplication_256(uint64_t* _a, uint64_t* _b, uint64_t* _mod, u
   //*out = result; // buggy version
 }
 
-/*
-
 // interleaved (broken)
 
-void montgomery_multiplication_256(uint64_t* const x, uint64_t* const y, uint64_t* const m, uint64_t* const inv, uint64_t *out){
+void montgomery_multiplication_256_interleaved(uint64_t* const x, uint64_t* const y, uint64_t* const m, uint64_t* const inv, uint64_t *out){
   uint64_t A[256/64*2] = {0};
   for (int i=0; i<256/64; i++){
     uint64_t ui = (A[i]+x[i]*y[0])*inv[0];
@@ -123,9 +119,7 @@ void montgomery_multiplication_256(uint64_t* const x, uint64_t* const y, uint64_
       carry = (temp<out[i] || m[i]<carry) ? 1:0;
     }
   }
-
 }
-*/
 
 void BNAPI::SetMemory(wabt::interp::Memory *memory) {
     this->memory = memory;
