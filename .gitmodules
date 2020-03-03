@@ -1,6 +1,6 @@
 [submodule "wabt"]
 	path = wabt
-	url = https://github.com/jwasinger/wabt
+	url = https://github.com/webassembly/wabt
 [submodule "yaml-cpp"]
 	path = yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp
