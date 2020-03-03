@@ -45,6 +45,7 @@ static void trace_word(uint8_t *mem) {
 
 //non-interleaved
 
+/*
 void montgomery_multiplication_256(uint64_t* _a, uint64_t* _b, uint64_t* _mod, uint64_t* _inv, uint64_t* _out) {
   using intx::uint512;
 
@@ -68,8 +69,7 @@ void montgomery_multiplication_256(uint64_t* _a, uint64_t* _b, uint64_t* _mod, u
   *out = result.lo; // correct version
   //*out = result; // buggy version
 }
-
-/*
+*/
 
 // interleaved (broken)
 
@@ -125,7 +125,6 @@ void montgomery_multiplication_256(uint64_t* const x, uint64_t* const y, uint64_
   }
 
 }
-*/
 
 void BNAPI::SetMemory(wabt::interp::Memory *memory) {
     this->memory = memory;

@@ -11,7 +11,7 @@ option(BUILD_TESTS OFF)
 add_subdirectory(${WABT_DIR}/wabt)
 add_subdirectory(${YAMLCPP_DIR}/yaml-cpp)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++17 -g -Wall")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++17 -Ofast -Wall")
 
 add_library(intx STATIC
   intx/lib/intx/div.cpp
