@@ -193,6 +193,19 @@ ExecResult Account::exec(std::vector<uint8_t> &calldata){
   );
 
   hostModule->AppendFuncExport(
+    "memcpy",
+    {{Type::I32, Type::I32}, {}},
+    [&]( const interp::HostFunc*, const interp::FuncSignature*, 
+                 const interp::TypedValues& args, interp::TypedValues& results ) {
+      uint32_t dst = static_cast<uint32_t>(args[0].value.i32);
+      uint32_t src = static_cast<uint32_t>(args[1].value.i32);
+
+      memcpy(this->module_memory->data.data() + dst, this->module_memory->data.data() + src, 32);
+      return interp::ResultType::Ok;
+    }
+  );
+
+  hostModule->AppendFuncExport(
     "eth2_blockDataSize",
     {{}, {Type::I32}},
     [&]( const interp::HostFunc*,
