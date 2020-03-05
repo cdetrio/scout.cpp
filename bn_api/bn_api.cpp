@@ -12,10 +12,16 @@ const bool tracing = false;
 
 intx::uint256 BignumOne = intx::from_string<intx::uint256>("1");
 
-intx::uint256 FqModulus = intx::from_string<intx::uint256>("21888242871839275222246405745257275088696311157297823662689037894645226208583");
-intx::uint256 FqInv = intx::from_string<intx::uint256>("211173256549385567650468519415768310665");
-intx::uint256 FqRsquared = intx::from_string<intx::uint256>("3096616502983703923843567936837374451735540968419076528771170197431451843209");
+/*** Fq constants here are for secp256k1 ***/
+// modulus = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
+// inv = 0xbcb223fedc24a059d838091dd2253531
+// r_squared = 0x1000007a2000e90a1
+intx::uint256 FqModulus = intx::from_string<intx::uint256>("115792089237316195423570985008687907853269984665640564039457584007908834671663");
+intx::uint256 FqInv = intx::from_string<intx::uint256>("250819822124803770581580479000962479409");
+intx::uint256 FqRsquared = intx::from_string<intx::uint256>("18446752466076602529");
 
+
+/** Fr constants are for bn128. leaving them here just so the code compiles **/
 intx::uint256 FrModulus = intx::from_string<intx::uint256>("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 intx::uint256 FrInv = intx::from_string<intx::uint256>("134950519161967129512891662437158223871");
 intx::uint256 FrRsquared = intx::from_string<intx::uint256>("944936681149208446651664254269745548490766851729442924617792859073125903783");
