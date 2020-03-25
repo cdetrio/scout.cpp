@@ -15,22 +15,8 @@ public:
     void SetMemory(wabt::interp::Memory *memory);
     void AddHostFunctions(interp::HostModule *host_module);
 
-	void mul256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
-    void div256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &c_offset, uint32_t &ret_offset);
-    uint32_t add256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
-    uint32_t sub256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
+    void addmod256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &mod_offset, uint32_t &ret_offset);
+    void submod256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &mod_offset, uint32_t &ret_offset);
+    void mulmodmont256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &mod_offset, uint32_t &inv_offset, uint32_t &ret_offset);
 
-    void f1m_add(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
-    void f1m_sub(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
-    void f1m_mul(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
-    void f1m_square(uint32_t &a_offset, uint32_t &ret_offset);
-    void f1m_fromMont(uint32_t &a_offset, uint32_t &ret_offset);
-    void f1m_toMont(uint32_t &a_offset, uint32_t &ret_offset);
-
-    void fr_add(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
-    void fr_sub(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
-    void fr_mul(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset);
-    void fr_square(uint32_t &a_offset, uint32_t &ret_offset);
-    void fr_fromMont(uint32_t &a_offset, uint32_t &ret_offset);
-    void fr_toMont(uint32_t &a_offset, uint32_t &ret_offset);
 };

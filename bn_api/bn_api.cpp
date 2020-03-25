@@ -195,7 +195,7 @@ void BNAPI::SetMemory(wabt::interp::Memory *memory) {
 }
 
 void BNAPI::AddHostFunctions(wabt::interp::HostModule *host_module) {
-	host_module->AppendFuncExport("bignum_f1m_mul", {{Type::I32, Type::I32, Type::I32}, {}}, 
+	host_module->AppendFuncExport("mulmodmont256", {{Type::I32, Type::I32, Type::I32, Type::I32,  Type::I32}, {}}, 
         [&]( const interp::HostFunc* host_func, 
              const interp::FuncSignature *signature,
              const interp::TypedValues &args,
@@ -203,27 +203,16 @@ void BNAPI::AddHostFunctions(wabt::interp::HostModule *host_module) {
 
             uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
             uint32_t arg2_offset = static_cast<uint32_t>(args[1].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[2].value.i32);
+            uint32_t mod_offset = static_cast<uint32_t>(args[2].value.i32);
+            uint32_t inv_offset = static_cast<uint32_t>(args[3].value.i32);
+            uint32_t ret_offset = static_cast<uint32_t>(args[4].value.i32);
 
-            this->f1m_mul(arg1_offset, arg2_offset, ret_offset);
+            this->mulmodmont256(arg1_offset, arg2_offset, mod_offset, inv_offset, ret_offset);
             return interp::ResultType::Ok;
         });
 
-	host_module->AppendFuncExport("bignum_f1m_square", {{Type::I32, Type::I32}, {}},
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
 
-            uint32_t arg_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[1].value.i32);
-
-            this->f1m_square(arg_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
-	host_module->AppendFuncExport("bignum_f1m_add", {{Type::I32, Type::I32, Type::I32}, {}},
+	host_module->AppendFuncExport("addmod256", {{Type::I32, Type::I32, Type::I32, Type::I32}, {}},
         [&]( const interp::HostFunc* host_func, 
              const interp::FuncSignature *signature,
              const interp::TypedValues &args,
@@ -231,14 +220,15 @@ void BNAPI::AddHostFunctions(wabt::interp::HostModule *host_module) {
 
             uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
             uint32_t arg2_offset = static_cast<uint32_t>(args[1].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[2].value.i32);
+            uint32_t mod_offset = static_cast<uint32_t>(args[2].value.i32);
+            uint32_t ret_offset = static_cast<uint32_t>(args[3].value.i32);
 
-            this->f1m_add(arg1_offset, arg2_offset, ret_offset);
+            this->addmod256(arg1_offset, arg2_offset, mod_offset, ret_offset);
 
             return interp::ResultType::Ok;
         });
 
-	host_module->AppendFuncExport("bignum_f1m_sub", {{Type::I32, Type::I32, Type::I32}, {}},
+	host_module->AppendFuncExport("submod256", {{Type::I32, Type::I32, Type::I32, Type::I32}, {}},
         [&]( const interp::HostFunc* host_func, 
              const interp::FuncSignature *signature,
              const interp::TypedValues &args,
@@ -246,128 +236,15 @@ void BNAPI::AddHostFunctions(wabt::interp::HostModule *host_module) {
 
             uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
             uint32_t arg2_offset = static_cast<uint32_t>(args[1].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[2].value.i32);
+            uint32_t mod_offset = static_cast<uint32_t>(args[2].value.i32);
+            uint32_t ret_offset = static_cast<uint32_t>(args[3].value.i32);
 
-            this->f1m_sub(arg1_offset, arg2_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
-	host_module->AppendFuncExport("bignum_f1m_toMontgomery", {{Type::I32, Type::I32}, {}},
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
-
-            uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[1].value.i32);
-
-            this->f1m_toMont(arg1_offset, ret_offset);
+            this->submod256(arg1_offset, arg2_offset, mod_offset, ret_offset);
 
             return interp::ResultType::Ok;
         });
 
-	host_module->AppendFuncExport("bignum_f1m_fromMontgomery", {{Type::I32, Type::I32}, {}},
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
-
-            uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[1].value.i32);
-
-            this->f1m_fromMont(arg1_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
-	host_module->AppendFuncExport("bignum_frm_mul", {{Type::I32, Type::I32, Type::I32}, {}}, 
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
-
-            uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t arg2_offset = static_cast<uint32_t>(args[1].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[2].value.i32);
-
-            this->fr_mul(arg1_offset, arg2_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
-	host_module->AppendFuncExport("bignum_frm_square", {{Type::I32, Type::I32}, {}},
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
-
-            uint32_t arg_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[1].value.i32);
-
-            this->fr_square(arg_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
-	host_module->AppendFuncExport("bignum_frm_add", {{Type::I32, Type::I32, Type::I32}, {}},
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
-
-            uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t arg2_offset = static_cast<uint32_t>(args[1].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[2].value.i32);
-
-            this->fr_add(arg1_offset, arg2_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
-	host_module->AppendFuncExport("bignum_frm_sub", {{Type::I32, Type::I32, Type::I32}, {}},
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
-
-            uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t arg2_offset = static_cast<uint32_t>(args[1].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[2].value.i32);
-
-            this->fr_sub(arg1_offset, arg2_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
-	host_module->AppendFuncExport("bignum_frm_fromMontgomery", {{Type::I32, Type::I32}, {}},
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
-
-            uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[1].value.i32);
-
-            this->fr_fromMont(arg1_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
-	host_module->AppendFuncExport("bignum_frm_toMontgomery", {{Type::I32, Type::I32}, {}},
-        [&]( const interp::HostFunc* host_func, 
-             const interp::FuncSignature *signature,
-             const interp::TypedValues &args,
-             interp::TypedValues &results) {
-
-            uint32_t arg1_offset = static_cast<uint32_t>(args[0].value.i32);
-            uint32_t ret_offset = static_cast<uint32_t>(args[1].value.i32);
-
-            this->fr_toMont(arg1_offset, ret_offset);
-
-            return interp::ResultType::Ok;
-        });
-
+  /*
 	host_module->AppendFuncExport("bignum_int_mul", {{Type::I32, Type::I32, Type::I32}, {}},
         [&]( const interp::HostFunc* host_func, 
              const interp::FuncSignature *signature,
@@ -432,8 +309,10 @@ void BNAPI::AddHostFunctions(wabt::interp::HostModule *host_module) {
 
             return interp::ResultType::Ok;
         });
+   */
 }
 
+/*
 void BNAPI::mul256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset) {
 	intx::uint256* a = reinterpret_cast<intx::uint256*>(&(this->memory->data[a_offset]));
 	intx::uint256* b = reinterpret_cast<intx::uint256*>(&(this->memory->data[b_offset]));
@@ -490,6 +369,7 @@ uint32_t BNAPI::sub256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_off
 
     return carry;
 }
+*/
 
 void add_mod(intx::uint256 *a, intx::uint256 *b, intx::uint256 *modulus, intx::uint256 *ret_mem) {
 	intx::uint512 ret_full = intx::uint512{0,*a} + intx::uint512{0,*b};
@@ -515,65 +395,47 @@ void mul_mod(uint64_t *a, uint64_t *b, intx::uint256 *modulus, intx::uint256 *in
     montgomery_multiplication_256(a, b, mod, inv, ret);
 }
 
-void square_mod(uint64_t *a, intx::uint256 *modulus, intx::uint256 *inverse, uint64_t *ret) {
-    uint64_t *mod = reinterpret_cast<uint64_t *>(modulus);
-    uint64_t *inv = reinterpret_cast<uint64_t *>(inverse);
 
-    montgomery_multiplication_256(a, a, mod, inv, ret);
-}
 
-void fromMont(uint64_t *a, intx::uint256 *modulus, intx::uint256 *inverse, uint64_t *ret_offset) {
-    uint64_t* b = reinterpret_cast<uint64_t*>(&BignumOne);
-    uint64_t *mod = reinterpret_cast<uint64_t *>(modulus);
-    uint64_t *inv = reinterpret_cast<uint64_t *>(inverse);
-
-    montgomery_multiplication_256(a, b, mod, inv, ret_offset);
-}
-
-void toMont(uint64_t *a, intx::uint256 *r2, intx::uint256 *modulus, intx::uint256 *inverse, uint64_t *ret_offset) {
-    uint64_t *mod = reinterpret_cast<uint64_t *>(modulus);
-    uint64_t *inv = reinterpret_cast<uint64_t *>(inverse);
-    uint64_t *r_squared = reinterpret_cast<uint64_t *>(r2);
-
-    montgomery_multiplication_256(a, r_squared, mod, inv, ret_offset);
-}
-
-void BNAPI::f1m_add(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset) {
+void BNAPI::addmod256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &mod_offset, uint32_t &ret_offset) {
 	intx::uint256* a = reinterpret_cast<intx::uint256*>(&(this->memory->data[a_offset]));
 	intx::uint256* b = reinterpret_cast<intx::uint256*>(&(this->memory->data[b_offset]));
-
+  intx::uint256* modulus = reinterpret_cast<intx::uint256*>(&(this->memory->data[mod_offset]));
 	intx::uint256* ret_mem = reinterpret_cast<intx::uint256*>(&(this->memory->data[ret_offset]));
 
     if (tracing) {
-        std::cout << "f1m_add " << intx::to_string(*a) << " + " << intx::to_string(*b);
+        std::cout << "addmod256 " << intx::to_string(*a) << " + " << intx::to_string(*b);
     }
 
-    add_mod(a, b, &FqModulus, ret_mem);
+    add_mod(a, b, modulus, ret_mem);
 
     if (tracing) {
         std::cout <<  " = " << intx::to_string(*ret_mem) << std::endl;
     }
 }
 
-void BNAPI::f1m_sub(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset) {
+void BNAPI::submod256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &mod_offset, uint32_t &ret_offset) {
     intx::uint256* a = reinterpret_cast<intx::uint256*>(&(this->memory->data[a_offset]));
     intx::uint256* b = reinterpret_cast<intx::uint256*>(&(this->memory->data[b_offset]));
+    intx::uint256* modulus = reinterpret_cast<intx::uint256*>(&(this->memory->data[mod_offset]));
     intx::uint256* ret_mem = reinterpret_cast<intx::uint256*>(&(this->memory->data[ret_offset]));
 
     if (tracing) {
-        std::cout << "f1m_sub" << intx::to_string(*a) << " - " << intx::to_string(*b);
+        std::cout << "submod256" << intx::to_string(*a) << " - " << intx::to_string(*b);
     }
 
-    sub_mod(a, b, &FqModulus, ret_mem);
+    sub_mod(a, b, modulus, ret_mem);
 
     if (tracing) {
         std::cout << " = " << intx::to_string(*ret_mem) << std::endl;
     }
 }
 
-void BNAPI::f1m_mul(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset) {
+void BNAPI::mulmodmont256(uint32_t &a_offset, uint32_t &b_offset, uint32_t &mod_offset, uint32_t &inv_offset, uint32_t &ret_offset) {
     uint64_t* a = reinterpret_cast<uint64_t*>(&(this->memory->data[a_offset]));
     uint64_t* b = reinterpret_cast<uint64_t*>(&(this->memory->data[b_offset]));
+    uint64_t* modulus = reinterpret_cast<uint64_t*>(&(this->memory->data[mod_offset]));
+    uint64_t* inv = reinterpret_cast<uint64_t*>(&(this->memory->data[inv_offset]));
     uint64_t* ret = reinterpret_cast<uint64_t*>(&(this->memory->data[ret_offset]));
 
     if (tracing) {
@@ -582,7 +444,8 @@ void BNAPI::f1m_mul(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset
         //std::cout << "f1m_mul " << intx::to_string(*a_num) << " * " << intx::to_string(*b_num);
     }
 
-    mul_mod(a, b, &FqModulus, &FqInv, ret);
+    //mul_mod(a, b, modulus, inv, ret);
+    montgomery_multiplication_256(a, b, modulus, inv, ret);
 
     if (tracing) {
         intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
@@ -590,146 +453,5 @@ void BNAPI::f1m_mul(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset
     }
 }
 
-void BNAPI::f1m_square(uint32_t &a_offset, uint32_t &ret_offset) {
-    uint64_t* a = reinterpret_cast<uint64_t*>(&(this->memory->data[a_offset]));
-    uint64_t* mod = reinterpret_cast<uint64_t*>(&FqModulus);
-    uint64_t* inv = reinterpret_cast<uint64_t*>(&FqInv);
-    uint64_t* ret = reinterpret_cast<uint64_t*>(&(this->memory->data[ret_offset]));
-
-    if (tracing) {
-        intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
-        std::cout << "f1m_square " << intx::to_string(*a_num) << " ** 2 = ";
-    }
-
-    square_mod(a, &FqModulus, &FqInv, ret);
-
-    if (tracing) {
-        intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
-        std::cout << intx::to_string(*ret_num) << std::endl;
-    }
-}
-
-void BNAPI::f1m_fromMont(uint32_t &a_offset, uint32_t &ret_offset) {
-    uint64_t* a = reinterpret_cast<uint64_t*>(&(this->memory->data[a_offset]));
-    uint64_t* ret = reinterpret_cast<uint64_t*>(&(this->memory->data[ret_offset]));
-
-    if (tracing) {
-        intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
-        std::cout << "f1m_fromMont " << intx::to_string(*a_num);
-    }
-
-    fromMont(a, &FqModulus, &FqInv, ret);
-    if (tracing) {
-        intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
-        std::cout << " -> " << intx::to_string(*ret_num) << std::endl;
-    }
-}
-
-void BNAPI::f1m_toMont(uint32_t &a_offset, uint32_t &ret_offset) {
-    uint64_t* a = reinterpret_cast<uint64_t*>(&(this->memory->data[a_offset]));
-    uint64_t* ret = reinterpret_cast<uint64_t*>(&(this->memory->data[ret_offset]));
-
-    if (tracing) {
-        intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
-
-        std::cout << "f1m_toMont " << intx::to_string(*a_num) << " -> ";
-    }
-
-    toMont(a, &FqRsquared, &FqModulus, &FqInv, ret);
-
-    if (tracing) {
-        intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
-        std::cout << intx::to_string(*ret_num) << std::endl;
-    }
-}
-
-void BNAPI::fr_add(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset) {
-	intx::uint256* a = reinterpret_cast<intx::uint256*>(&(this->memory->data[a_offset]));
-	intx::uint256* b = reinterpret_cast<intx::uint256*>(&(this->memory->data[b_offset]));
-
-	intx::uint256* ret_mem = reinterpret_cast<intx::uint256*>(&(this->memory->data[ret_offset]));
-
-    add_mod(a, b, &FrModulus, ret_mem);
-
-    if (tracing) {
-        std::cout << "fr_add " << intx::to_string(*a) << " - " << intx::to_string(*b) << " = " << intx::to_string(*ret_mem) << std::endl;
-    }
-}
-
-void BNAPI::fr_sub(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset) {
-    intx::uint256* a = reinterpret_cast<intx::uint256*>(&(this->memory->data[a_offset]));
-    intx::uint256* b = reinterpret_cast<intx::uint256*>(&(this->memory->data[b_offset]));
-
-    intx::uint256* ret_mem = reinterpret_cast<intx::uint256*>(&(this->memory->data[ret_offset]));
-    sub_mod(a, b, &FrModulus, ret_mem);
-
-    if (tracing) {
-        std::cout << "fr_sub " << intx::to_string(*a) << " - " << intx::to_string(*b) << " = " << intx::to_string(*ret_mem) << std::endl;
-    }
-}
-
-void BNAPI::fr_mul(uint32_t &a_offset, uint32_t &b_offset, uint32_t &ret_offset) {
-    uint64_t* a = reinterpret_cast<uint64_t*>(&(this->memory->data[a_offset]));
-    uint64_t* b = reinterpret_cast<uint64_t*>(&(this->memory->data[b_offset]));
-    uint64_t* ret = reinterpret_cast<uint64_t*>(&(this->memory->data[ret_offset]));
-
-    mul_mod(a, b, &FrModulus, &FrInv, ret);
-
-    if (tracing) {
-        intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
-        intx::uint256 *b_num = reinterpret_cast<intx::uint256 *>(b);
-        intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
-
-        std::cout << "fr_mul " << intx::to_string(*a_num) << " * " << intx::to_string(*b_num) << " = " << intx::to_string(*ret_num) << std::endl;
-    }
-}
-
-void BNAPI::fr_square(uint32_t &a_offset, uint32_t &ret_offset) {
-    uint64_t* a = reinterpret_cast<uint64_t*>(&(this->memory->data[a_offset]));
-    uint64_t* ret = reinterpret_cast<uint64_t*>(&(this->memory->data[ret_offset]));
-
-    square_mod(a, &FrModulus, &FrInv, ret);
-    if (tracing) {
-        intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
-        intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
-
-        std::cout << "fr_square " << intx::to_string(*a_num) << " ** 2 = " << intx::to_string(*ret_num) << std::endl;
-    }
-}
-
-void BNAPI::fr_fromMont(uint32_t &a_offset, uint32_t &ret_offset) {
-    uint64_t* a = reinterpret_cast<uint64_t*>(&(this->memory->data[a_offset]));
-    uint64_t* ret = reinterpret_cast<uint64_t*>(&(this->memory->data[ret_offset]));
-
-    fromMont(a, &FrModulus, &FrInv, ret);
-    if (tracing) {
-        intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
-        intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
-
-        std::cout << "fr_fromMont " << intx::to_string(*a_num) << " -> " << intx::to_string(*ret_num) << std::endl;
-    }
-}
-
-void BNAPI::fr_toMont(uint32_t &a_offset, uint32_t &ret_offset) {
-    uint64_t* a = reinterpret_cast<uint64_t*>(&(this->memory->data.data()[a_offset]));
-    uint64_t* ret = reinterpret_cast<uint64_t*>(&(this->memory->data[ret_offset]));
 
 
-    if (tracing) {
-        intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
-        std::cout << "fr_toMont " << a_offset << " " << intx::to_string(*a_num);;
-    }
-
-    toMont(a, &FrRsquared, &FrModulus, &FrInv, ret);
-
-    if (tracing) {
-        intx::uint256 *a_num = reinterpret_cast<intx::uint256 *>(a);
-        intx::uint256 *ret_num = reinterpret_cast<intx::uint256 *>(ret);
-
-        std::cout << " -> " << intx::to_string(*ret_num) << std::endl;
-        //std::cout << "modulus " << intx::to_string(FrModulus) << " inv " << intx::to_string(FrInv) << std::endl;
-        //std::cout << a_offset << std::endl;
-        //std::cout << static_cast<void*>((uint8_t *)(this->memory->data.data() + 512096)) << std::endl;
-        //trace_word((uint8_t *)(this->memory->data.data() + 512096));
-    }
-}
